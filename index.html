@@ -11,9 +11,18 @@
     <body>
         <canvas id="gl-canvas"></canvas>
         <div>
-            <button onclick="renderImage(1)">Render Image 1</button>
-            <button onclick="renderImage(2)">Render Image 2</button>
-            <button onclick="renderImage(3)">Render Image 3</button>
+            <button onclick="handleSceneButton(1)">Scene 1</button>
+            <button onclick="handleSceneButton(2)">Scene 2</button>
+            <button onclick="handleSceneButton(3)">Scene 3</button>
+            <button onclick="handleSceneButton(4)">
+                Scene 1 (Moving Light)
+            </button>
+            <button onclick="handleSceneButton(5)">
+                Scene 4 (Earth and Moon)
+            </button>
+            <button onclick="handleSceneButton(6)">
+                Scene 5 (Solar System)
+            </button>
         </div>
 
         <script id="vertex-shader" type="x-shader/x-vertex">
@@ -47,6 +56,7 @@
                 vec3 center;
                 float radius;
                 Material material;
+                bool isLightSource;
             };
 
             struct Plane {
@@ -55,7 +65,7 @@
                 Material material;
             };
 
-            #define MAX_SPHERES 5
+            #define MAX_SPHERES 10
             #define MAX_PLANES 5
             #define MAX_DEPTH 5
             #define EPSILON 0.001
@@ -81,6 +91,10 @@
             }
 
             bool intersectRaySphere(vec3 rayOrigin, vec3 rayDir, Sphere sphere, out float t, out vec3 hitPoint, out vec3 normal) {
+                if (sphere.isLightSource) {
+                    return false;
+                }
+
                 vec3 oc = rayOrigin - sphere.center;
                 float a = dot(rayDir, rayDir);
                 float b = 2.0 * dot(oc, rayDir);
@@ -145,6 +159,7 @@
                     for (int i = 0; i < MAX_SPHERES; i++) {
                         float t;
                         vec3 hitPoint, normal;
+
                         if (intersectRaySphere(rayOrigin, rayDir, uSpheres[i], t, hitPoint, normal)) {
                             if (t < closestT) {
                                 closestT = t;
@@ -153,6 +168,9 @@
                                 closestMaterial = uSpheres[i].material;
                                 hit = true;
                             }
+                        }
+                        if (uSpheres[i].isLightSource) {
+                            hit = false;
                         }
                     }
 
@@ -189,11 +207,29 @@
                 return color;
             }
 
+            vec3 lightSource(vec3 rayOrigin, vec3 rayDir) {
+                vec3 color = vec3(0.0, 0.0, 0.0);
+
+                for (int i = 0; i < MAX_SPHERES; i++) {
+                    if (uSpheres[i].isLightSource) {
+                        float t;
+                        vec3 hitPoint, normal;
+
+                        if (intersectRaySphere(rayOrigin, rayDir, uSpheres[i], t, hitPoint, normal)) {
+                            color = uSpheres[i].material.diffuse;
+                        }
+                    }
+                }
+
+                return color;
+            }
+
             void main() {
                 vec3 rayOrigin = eye;
                 vec3 rayDir = normalize(vec3((vTexCoord.x - 0.5) * uAspect, vTexCoord.y - 0.5, -1.0));
 
                 vec3 color = traceRay(rayOrigin, rayDir);
+
                 gl_FragColor = vec4(color, 1.0);
             }
         </script>

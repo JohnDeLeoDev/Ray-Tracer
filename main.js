@@ -1,13 +1,19 @@
 var canvas
 var gl
 var program
-var eye = vec3(0.0, 0.0, 1.0) // Camera position
-var lightPosition = vec3(2.0, 2.0, -3.0)
+var eye = vec3(0.0, 0.0, 1.0)
 var aspectRatio = 512 / 512
 var maxDepth = 5
+var maxSpheres = 10
+var maxPlanes = 5
+var sceneChoice = 6
+var animating = true
+var animationSpeed = 0.005
+var t = 0.0
 
 var scenes = [
     {
+        // Scene 1
         spheres: [
             {
                 center: vec3(-0.5, -0.5, -3.5),
@@ -48,6 +54,7 @@ var scenes = [
         lightPosition: vec3(-5.0, 5.0, 0.0),
     },
     {
+        // Scene 2
         spheres: [
             {
                 center: vec3(-1.0, -1.0, -3.0),
@@ -98,6 +105,7 @@ var scenes = [
         lightPosition: vec3(0.0, 0.0, -1.0),
     },
     {
+        // Scene 3
         spheres: [
             {
                 center: vec3(-0.5, -0.75, -1.5),
@@ -186,6 +194,214 @@ var scenes = [
         ],
         lightPosition: vec3(0.0, 0.0, -0.5),
     },
+    {
+        // Scene 4
+        spheres: [
+            {
+                center: vec3(-1.0, -1.0, -3.0),
+                radius: 0.5,
+                material: {
+                    ambient: vec3(0.1, 0.0, 0.0),
+                    diffuse: vec3(0.8, 0.0, 0.0),
+                    specular: vec3(1.0, 1.0, 1.0),
+                    shininess: 100.0,
+                    reflectivity: 0.3,
+                },
+            },
+            {
+                center: vec3(1.0, 1.0, -3.0),
+                radius: 0.5,
+                material: {
+                    ambient: vec3(0.0, 0.1, 0.0),
+                    diffuse: vec3(0.0, 0.8, 0.0),
+                    specular: vec3(1.0, 1.0, 1.0),
+                    shininess: 100.0,
+                    reflectivity: 0.3,
+                },
+            },
+            {
+                center: vec3(1.0, -1.0, -3.0),
+                radius: 0.5,
+                material: {
+                    ambient: vec3(0.0, 0.0, 0.1),
+                    diffuse: vec3(0.0, 0.0, 0.8),
+                    specular: vec3(1.0, 1.0, 1.0),
+                    shininess: 100.0,
+                    reflectivity: 0.3,
+                },
+            },
+            {
+                center: vec3(-1.0, 1.0, -3.0),
+                radius: 0.5,
+                material: {
+                    ambient: vec3(0.1, 0.1, 0.0),
+                    diffuse: vec3(0.8, 0.8, 0.0),
+                    specular: vec3(1.0, 1.0, 1.0),
+                    shininess: 100.0,
+                    reflectivity: 0.3,
+                },
+            },
+        ],
+        planes: [],
+        lightPosition: vec3(0.0, 0.0, -1.0),
+    },
+    {
+        // Scene 5 - Earth and Moon
+        spheres: [
+            {
+                center: vec3(0.0, 0.0, -3.0),
+                radius: 0.5,
+                material: {
+                    ambient: vec3(0.0, 0.0, 0.1),
+                    diffuse: vec3(0.1, 0.1, 0.8),
+                    specular: vec3(1.0, 1.0, 1.0),
+                    shininess: 100.0,
+                    reflectivity: 0.1,
+                },
+            },
+            {
+                center: vec3(1.0, 0.0, -3.0),
+                radius: 0.1,
+                material: {
+                    ambient: vec3(0.2, 0.2, 0.2),
+                    diffuse: vec3(0.8, 0.8, 0.8),
+                    specular: vec3(1.0, 1.0, 1.0),
+                    shininess: 100.0,
+                    reflectivity: 0.1,
+                },
+            },
+        ],
+        planes: [],
+        lightPosition: vec3(10.0, 10.0, -2.0),
+    },
+    {
+        // Scene 6 - Solar System
+        spheres: [
+            {
+                // Mercury
+                center: vec3(0.5, 0.0, -3.0),
+                radius: 0.05,
+                material: {
+                    ambient: vec3(0.3, 0.25, 0.15),
+                    diffuse: vec3(0.6, 0.5, 0.3),
+                    specular: vec3(1.0, 1.0, 1.0),
+                    shininess: 100.0,
+                    reflectivity: 0.5,
+                },
+            },
+            {
+                // Venus
+                center: vec3(0.7, 0.0, -3.0),
+                radius: 0.1,
+                material: {
+                    ambient: vec3(0.45, 0.4, 0.2),
+                    diffuse: vec3(0.9, 0.8, 0.4),
+                    specular: vec3(1.0, 1.0, 1.0),
+                    shininess: 100.0,
+                    reflectivity: 0.5,
+                },
+            },
+            {
+                // Earth
+                center: vec3(1.0, 0.0, -3.0),
+                radius: 0.12,
+                material: {
+                    ambient: vec3(0.05, 0.05, 0.4),
+                    diffuse: vec3(0.1, 0.1, 0.8),
+                    specular: vec3(1.0, 1.0, 1.0),
+                    shininess: 100.0,
+                    reflectivity: 0.5,
+                },
+            },
+            {
+                // Moon
+                center: vec3(1.15, 0.0, -3.0),
+                radius: 0.03,
+                material: {
+                    ambient: vec3(0.2, 0.2, 0.2),
+                    diffuse: vec3(0.5, 0.5, 0.5),
+                    specular: vec3(1.0, 1.0, 1.0),
+                    shininess: 100.0,
+                    reflectivity: 0.5,
+                },
+            },
+            {
+                // Mars
+                center: vec3(1.3, 0.0, -3.0),
+                radius: 0.08,
+                material: {
+                    ambient: vec3(0.4, 0.05, 0.05),
+                    diffuse: vec3(0.8, 0.1, 0.1),
+                    specular: vec3(1.0, 1.0, 1.0),
+                    shininess: 100.0,
+                    reflectivity: 0.5,
+                },
+            },
+            {
+                // Jupiter
+                center: vec3(1.6, 0.0, -3.0),
+                radius: 0.15,
+                material: {
+                    ambient: vec3(0.25, 0.12, 0.05),
+                    diffuse: vec3(0.5, 0.25, 0.01),
+                    specular: vec3(1.0, 1.0, 1.0),
+                    shininess: 100.0,
+                    reflectivity: 0.5,
+                },
+            },
+            {
+                // Saturn
+                center: vec3(2.0, 0.0, -3.0),
+                radius: 0.12,
+                material: {
+                    ambient: vec3(0.4, 0.4, 0.1),
+                    diffuse: vec3(0.8, 0.8, 0.2),
+                    specular: vec3(1.0, 1.0, 1.0),
+                    shininess: 100.0,
+                    reflectivity: 0.5,
+                },
+            },
+            {
+                // Uranus
+                center: vec3(2.3, 0.0, -3.0),
+                radius: 0.1,
+                material: {
+                    ambient: vec3(0.1, 0.35, 0.4),
+                    diffuse: vec3(0.2, 0.7, 0.8),
+                    specular: vec3(1.0, 1.0, 1.0),
+                    shininess: 100.0,
+                    reflectivity: 0.5,
+                },
+            },
+            {
+                // Neptune
+                center: vec3(2.6, 0.0, -3.0),
+                radius: 0.1,
+                material: {
+                    ambient: vec3(0.05, 0.1, 0.45),
+                    diffuse: vec3(0.1, 0.2, 0.9),
+                    specular: vec3(1.0, 1.0, 1.0),
+                    shininess: 100.0,
+                    reflectivity: 0.5,
+                },
+            },
+        ],
+        planes: [
+            {
+                // back wall
+                point: vec3(0.0, 0.0, -10.0),
+                normal: vec3(0.0, 0.0, 1.0),
+                material: {
+                    ambient: vec3(0.0, 0.0, 0.0),
+                    diffuse: vec3(0.0, 0.0, 0.0),
+                    specular: vec3(2.0, 2.0, 0.0),
+                    shininess: 100.0,
+                    reflectivity: 0.0,
+                },
+            },
+        ],
+        lightPosition: vec3(0.0, 0.0, -7.8),
+    },
 ]
 window.onload = function init() {
     canvas = document.getElementById('gl-canvas')
@@ -209,7 +425,179 @@ window.onload = function init() {
     gl.uniform1f(gl.getUniformLocation(program, 'uAspect'), aspectRatio)
     gl.uniform1i(gl.getUniformLocation(program, 'uMaxDepth'), maxDepth)
 
-    renderImage(3)
+    render()
+}
+
+function render() {
+    if (animating) {
+        t += animationSpeed
+        /*
+        for (var i = 0; i < scenes[3].spheres.length; i++) {
+            scenes[3].spheres[i].center = vec3(
+                Math.sin(t + 1.5 * i) * 1.5,
+                Math.cos(t + 1.5 * i) * 1.5,
+                -3.0
+            )
+        }
+        */
+        if (sceneChoice === 4) {
+            scenes[3].lightPosition = vec3(
+                Math.sin(t) * 5.0,
+                Math.cos(t) * 5.0,
+                -1.0
+            )
+        }
+
+        if (sceneChoice === 5) {
+            scenes[4].spheres[1].center = vec3(
+                Math.sin(t + Math.PI) * 1.5,
+                Math.cos(t + Math.PI) * 1.5,
+                -3.0
+            )
+        }
+
+        if (sceneChoice === 6) {
+            for (var i = 0; i < scenes[5].spheres.length; i++) {
+                let scale = 0.8
+                let planetNum = i + 1
+                var speed = 2.0 / planetNum
+
+                // if moon, orbit earth
+                if (i === 3) {
+                    let earth = scenes[5].spheres[2]
+                    scenes[5].spheres[i].center = vec3(
+                        earth.center[0] +
+                            Math.sin(t * 10 * speed) * 0.4 * scale,
+                        earth.center[1] +
+                            Math.cos(t * 10 * speed) * 0.4 * scale,
+                        -8.0
+                    )
+                } else {
+                    scenes[5].spheres[i].center = vec3(
+                        Math.sin(t * speed + 2.5 * planetNum) *
+                            scale *
+                            planetNum,
+                        Math.cos(t * speed + 2.5 * planetNum) *
+                            scale *
+                            planetNum,
+                        -8.0
+                    )
+                }
+            }
+        }
+    }
+
+    clearWebGL()
+
+    renderImage(sceneChoice)
+
+    requestAnimationFrame(render)
+}
+
+function clearWebGL() {
+    for (var i = 0; i < scenes.length; i++) {
+        for (var j = 0; j < maxSpheres; j++) {
+            gl.uniform3fv(
+                gl.getUniformLocation(program, `uSpheres[${j}].center`),
+                flatten(vec3(0.0, 0.0, 0.0))
+            )
+            gl.uniform1f(
+                gl.getUniformLocation(program, `uSpheres[${j}].radius`),
+                0.0
+            )
+            gl.uniform3fv(
+                gl.getUniformLocation(
+                    program,
+                    `uSpheres[${j}].material.ambient`
+                ),
+                flatten(vec3(0.0, 0.0, 0.0))
+            )
+            gl.uniform3fv(
+                gl.getUniformLocation(
+                    program,
+                    `uSpheres[${j}].material.diffuse`
+                ),
+                flatten(vec3(0.0, 0.0, 0.0))
+            )
+            gl.uniform3fv(
+                gl.getUniformLocation(
+                    program,
+                    `uSpheres[${j}].material.specular`
+                ),
+                flatten(vec3(0.0, 0.0, 0.0))
+            )
+            gl.uniform1f(
+                gl.getUniformLocation(
+                    program,
+                    `uSpheres[${j}].material.shininess`
+                ),
+                0.0
+            )
+            gl.uniform1f(
+                gl.getUniformLocation(
+                    program,
+                    `uSpheres[${j}].material.reflectivity`
+                ),
+                0.0
+            )
+        }
+
+        for (var j = 0; j < maxPlanes; j++) {
+            gl.uniform3fv(
+                gl.getUniformLocation(program, `uPlanes[${j}].point`),
+                flatten(vec3(0.0, 0.0, 0.0))
+            )
+            gl.uniform3fv(
+                gl.getUniformLocation(program, `uPlanes[${j}].normal`),
+                flatten(vec3(0.0, 0.0, 0.0))
+            )
+            gl.uniform3fv(
+                gl.getUniformLocation(
+                    program,
+                    `uPlanes[${j}].material.ambient`
+                ),
+                flatten(vec3(0.0, 0.0, 0.0))
+            )
+            gl.uniform3fv(
+                gl.getUniformLocation(
+                    program,
+                    `uPlanes[${j}].material.diffuse`
+                ),
+                flatten(vec3(0.0, 0.0, 0.0))
+            )
+            gl.uniform3fv(
+                gl.getUniformLocation(
+                    program,
+                    `uPlanes[${j}].material.specular`
+                ),
+                flatten(vec3(0.0, 0.0, 0.0))
+            )
+            gl.uniform1f(
+                gl.getUniformLocation(
+                    program,
+                    `uPlanes[${j}].material.shininess`
+                ),
+                0.0
+            )
+            gl.uniform1f(
+                gl.getUniformLocation(
+                    program,
+                    `uPlanes[${j}].material.reflectivity`
+                ),
+                0.0
+            )
+        }
+    }
+}
+
+function handleSceneButton(sceneIndex) {
+    sceneChoice = sceneIndex
+    if (sceneIndex === 4 || sceneIndex === 5 || sceneIndex === 6) {
+        animating = true
+    } else {
+        animating = false
+    }
+    clearWebGL()
 }
 
 function renderImage(imageIndex) {
@@ -220,7 +608,7 @@ function renderImage(imageIndex) {
         flatten(scene.lightPosition)
     )
 
-    var sphereCount = Math.min(scene.spheres.length, 4)
+    var sphereCount = scene.spheres.length
     for (var i = 0; i < sphereCount; i++) {
         var sphere = scene.spheres[i]
         gl.uniform3fv(
@@ -253,6 +641,10 @@ function renderImage(imageIndex) {
                 `uSpheres[${i}].material.reflectivity`
             ),
             sphere.material.reflectivity
+        )
+        gl.uniform1f(
+            gl.getUniformLocation(program, `uSpheres[${i}].isLightSource`),
+            sphere.isLightSource ? 1.0 : 0.0
         )
     }
 
